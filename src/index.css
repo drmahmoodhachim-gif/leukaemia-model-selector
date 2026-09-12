@@ -37,9 +37,16 @@ p.lead { max-width: 68ch; color: #3b342c; }
   border-left: 3px solid var(--warn);
   background: #f7ead3;
   padding: 12px 14px;
-  margin: 8px 0 20px;
+  margin: 8px 0 12px;
+}
+.banner.info {
+  border-left-color: var(--info);
+  background: #e8eef6;
 }
 .banner strong { display: block; margin-bottom: 4px; }
+td.muted { color: var(--muted); }
+tr.protocol td:first-child { font-weight: 700; }
+tr.dep-null td { color: #4a433a; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
 .filter {

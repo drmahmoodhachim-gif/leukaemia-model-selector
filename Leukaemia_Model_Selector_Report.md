@@ -144,7 +144,7 @@ This is the same transporter phenotype already in the CSRG chapter: **B-ALL is M
 
 ## 6. Conflicts you must keep in the thesis, not bury
 
-**SLC5A8 scale.** CMP / DepMap 26Q1 call SMCT1 essentially off (<1%, max log2 ~0.01). CCLE 2025 via cBioPortal gives a myeloid tail (MUTZ-3 44 TPM, MONO-MAC-1 42, NOMO-1 26, P31-FUJ 25, HL-60 14, THP-1 5.3). The median is still ~0. The safe sentence is: *SMCT1 is not a pan-leukaemia importer; a minority of myeloid lines show transcript in one release and not the other — confirm by qPCR/protein before claiming SMCT1-dependent uptake.* MCT1 does not have this problem.
+**SLC5A8 scale — resolved for this tool.** MCT1 and MCT4 in the cBioPortal CCLE 2025 extract match DepMap to the decimal. SLC5A8 does not: the same extract reports MUTZ-3 44 TPM, MONO-MAC-1 42, NOMO-1 26, HL-60 14, while DepMap 26Q1 has a leukaemia maximum of 0.010 TPM and TARGET blasts are floor. That is a bad column, not a CMP-versus-CCLE conflict and not a qPCR to-do. The selector now treats SMCT1 as absent, drops it from transport / handle z-scores, and stores the discarded tail as `slc5a8_ccle2025` only. Protocol v5.0 stands: butyrate entry in these lines is MCT-mediated.
 
 **HCAR1.** CCLE 2025 reports HCAR1 in 115/115 lines (median TPM 35). That conflicts with DepMap 26Q1 (1/119). HCAR1/2/3 are homologous; **do not write that leukaemia lines express HCA1** until the DepMap gene page is checked. HCAR2 is floor in both releases.
 
@@ -182,14 +182,17 @@ If a fourth claim is receptor signalling, **stop and engineer FFAR2/HCAR2** (or 
 
 ---
 
-## 9. One-page pick list (order if starting from scratch)
+## 9. Protocol v5.0 pick list (dependency-aware)
 
-| Slot | Line | Primary job | Secondary job | Avoid using it for |
-|---|---|---|---|---|
-| A | HL-60 | HDACi-sensitive myeloid uptake | LPS | receptor signalling |
-| B | THP-1 | LPS / AHR; HDACi-resistant myeloid | transport | “sensitive HDACi AML” |
-| C | Jurkat | lymphoid negative; MCT4-low | HDAC transcript-high T-ALL | SCFA sensing, LPS |
-| D | MUTZ-3 or P31-FUJ | SCFA transport + oxidation | P31-FUJ: only FFAR2+ line | assuming they are HDACi-sensitive |
-| E | NB4 or RCH-ACV | independent HDACi-sensitive | NB4: APL genetics | SCFA receptors |
-| F | REH or NALM-6 | B-ALL MCT1-high / MCT4-low | paediatric ALL-like uptake | oxidation, LPS |
-| — | CESS, JVM-3 | — | — | any blast-biology claim |
+HL-60, THP-1, MUTZ-3, MONO-MAC-6, LOUCY and SUP-T11 are off this list: no CRISPR, or dependency-null. They can still supply expression contrast. P31-FUJ is receptor-only.
+
+| Slot | Line | Primary job | Avoid using it for |
+|---|---|---|---|
+| A | KASUMI-1 | AML axis contrast | Calling it MCT1-essential |
+| B | OCI-AML3 | AML axis contrast; MCT4-high | The B-ALL uptake claim |
+| C | NALM-6 | B-ALL MCT1-dependent | Oxidation or LPS |
+| D | SEM | B-ALL weak MCT1 dependency | The strong B-ALL arm |
+| E | DND-41 | T-ALL dependent (26Q1; absent from locked 24Q4 Chronos) | Assuming 24Q4 coverage |
+| F | Jurkat | T-ALL dependency-null contrast | Causal MCT1 uptake or LPS |
+| G | K-562 | Method development (MCT1 151 / MCT4 3.3 / Chronos −0.95) | Paediatric ALL biology |
+| H | RCH-ACV | B-ALL dependent + vorinostat-sensitive (AUC 0.36) | Receptor signalling |

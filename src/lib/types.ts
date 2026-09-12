@@ -11,8 +11,10 @@ export type LeukemiaLine = {
   hcar2: number | null;
   hcar3: number | null;
   slc5a8: number | null;
+  slc5a8_ccle2025: number | null;
   slc16a1: number | null;
   slc16a3: number | null;
+  slc16a1_dep: number | null;
   bsg: number | null;
   acads: number | null;
   echs1: number | null;
@@ -25,6 +27,9 @@ export type LeukemiaLine = {
   auc_belinostat: number | null;
   ffar2_detected: boolean;
   slc5a8_detected: boolean;
+  crispr_available: boolean;
+  mct1_dependent: boolean;
+  protocol_slot: string | null;
   cmp_scfa_pick: boolean;
   cmp_hdaci_sensitive: boolean;
   cmp_hdaci_resistant: boolean;
@@ -37,9 +42,11 @@ export type LeukemiaLine = {
 
 export type Question =
   | "all"
+  | "protocol"
+  | "causal"
   | "scfa"
   | "hdaci"
   | "lps"
   | "redox"
   | "ahr"
-  | "bench";
+  | "receptor";

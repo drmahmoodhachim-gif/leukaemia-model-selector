@@ -26,6 +26,11 @@ const NAMES: Record<string, string> = {
   ME1: "ME-1",
   MV411: "MV4-11",
   K562: "K-562",
+  KASUMI1: "KASUMI-1",
+  DND41: "DND-41",
+  SEM: "SEM",
+  LOUCY: "LOUCY",
+  SUPT11: "SUP-T11",
 };
 
 export function prettyLine(id: string): string {
@@ -40,22 +45,26 @@ export function fmt(n: number | null | undefined, digits = 2): string {
 
 export function matchesQuestion(row: LeukemiaLine, q: Question): boolean {
   if (q === "all") return true;
+  if (q === "protocol") return Boolean(row.protocol_slot);
+  if (q === "causal") return row.crispr_available;
   if (q === "scfa") return row.cmp_scfa_pick || (row.z_scfa_handle ?? 0) > 0.6;
   if (q === "hdaci")
     return row.cmp_hdaci_sensitive || row.cmp_hdaci_resistant || (row.auc_vorinostat ?? 9) < 0.42;
   if (q === "lps") return row.cmp_lps_competent;
   if (q === "redox") return row.cmp_redox_pick || (row.z_oxidation ?? 0) > 0.6;
   if (q === "ahr") return row.cmp_ahr_bile_pick;
-  if (q === "bench") return ["HL60", "THP1", "JURKAT"].includes(row.line);
+  if (q === "receptor") return row.ffar2_detected;
   return true;
 }
 
 export const QUESTIONS: { id: Question; label: string }[] = [
+  { id: "protocol", label: "Protocol v5.0" },
+  { id: "causal", label: "Has CRISPR" },
   { id: "all", label: "All lines" },
   { id: "scfa", label: "SCFA transport / ox" },
   { id: "hdaci", label: "HDACi response" },
   { id: "lps", label: "Pathogen products" },
   { id: "redox", label: "Oxidant handling" },
   { id: "ahr", label: "Indole / bile" },
-  { id: "bench", label: "On the bench" },
+  { id: "receptor", label: "FFAR2+" },
 ];

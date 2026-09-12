@@ -15,7 +15,8 @@ export async function loadLines(): Promise<{ rows: LeukemiaLine[]; source: "supa
     const { data, error } = await client
       .from("leukemia_model_lines")
       .select("*")
-      .order("z_scfa_handle", { ascending: false });
+      .order("protocol_slot", { ascending: true, nullsFirst: false })
+      .order("slc16a1_dep", { ascending: true });
     if (!error && data && data.length > 0) {
       return { rows: data as LeukemiaLine[], source: "supabase" };
     }
