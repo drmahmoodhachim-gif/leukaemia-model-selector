@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import Compare, { type PickMode } from "./Compare";
 import Inspector from "./Inspector";
 import Scatter from "./Scatter";
 import { loadLines } from "./lib/supabase";
@@ -27,6 +28,9 @@ export default function App() {
   const [lineage, setLineage] = useState("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [groupA, setGroupA] = useState<string[]>([]);
+  const [groupB, setGroupB] = useState<string[]>([]);
+  const [pick, setPick] = useState<PickMode>("inspect");
   const [notesOpen, setNotesOpen] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
     key: "slc16a1_dep",
@@ -75,8 +79,25 @@ export default function App() {
 
   const selectedRow = rows.find((r) => r.line === selected) ?? null;
 
+  function addTo(group: "A" | "B", id: string) {
+    if (!id) return;
+    const setSelf = group === "A" ? setGroupA : setGroupB;
+    const setOther = group === "A" ? setGroupB : setGroupA;
+    setSelf((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+    setOther((cur) => cur.filter((x) => x !== id));
+  }
+
   function selectLine(id: string) {
-    const next = id && id !== selected ? id : null;
+    if (!id) {
+      setSelected(null);
+      return;
+    }
+    if (pick === "A" || pick === "B") {
+      addTo(pick, id);
+      setSelected(id);
+      return;
+    }
+    const next = id !== selected ? id : null;
     setSelected(next);
     if (next) {
       requestAnimationFrame(() => {
@@ -149,9 +170,46 @@ export default function App() {
       </div>
 
       <div className="workspace">
-        <Scatter rows={filtered} selected={selected} onSelect={selectLine} />
+        <Scatter
+          rows={filtered}
+          selected={selected}
+          groupA={groupA}
+          groupB={groupB}
+          onSelect={selectLine}
+        />
         <Inspector row={selectedRow} />
       </div>
+      {selectedRow && (
+        <div className="filters" style={{ marginTop: 8 }}>
+          <button type="button" className="filter" onClick={() => addTo("A", selectedRow.line)}>
+            Add {prettyLine(selectedRow.line)} to A
+          </button>
+          <button type="button" className="filter" onClick={() => addTo("B", selectedRow.line)}>
+            Add {prettyLine(selectedRow.line)} to B
+          </button>
+        </div>
+      )}
+
+      <Compare
+        rows={rows}
+        groupA={groupA}
+        groupB={groupB}
+        pick={pick}
+        onPick={setPick}
+        onRemove={(id, g) => {
+          const set = g === "A" ? setGroupA : setGroupB;
+          set((cur) => cur.filter((x) => x !== id));
+        }}
+        onPreset={(a, b) => {
+          setGroupA(a);
+          setGroupB(b);
+          setPick("inspect");
+        }}
+        onClear={() => {
+          setGroupA([]);
+          setGroupB([]);
+        }}
+      />
 
       <h2>Protocol v5.0</h2>
       <div className="slot-grid">
@@ -263,6 +321,8 @@ export default function App() {
                   r.protocol_slot ? "protocol" : "",
                   r.crispr_available && !r.mct1_dependent ? "dep-null" : "",
                   selected === r.line ? "selected" : "",
+                  groupA.includes(r.line) ? "in-a" : "",
+                  groupB.includes(r.line) ? "in-b" : "",
                 ]
                   .filter(Boolean)
                   .join(" ") || undefined}

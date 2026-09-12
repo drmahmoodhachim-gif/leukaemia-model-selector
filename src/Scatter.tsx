@@ -20,10 +20,12 @@ const TICKS = [0, 1, 3, 10, 30, 100, 300];
 type Props = {
   rows: LeukemiaLine[];
   selected: string | null;
+  groupA?: string[];
+  groupB?: string[];
   onSelect: (line: string) => void;
 };
 
-export default function Scatter({ rows, selected, onSelect }: Props) {
+export default function Scatter({ rows, selected, groupA = [], groupB = [], onSelect }: Props) {
   const [hover, setHover] = useState<string | null>(null);
 
   const layout = useMemo(() => {
@@ -116,19 +118,22 @@ export default function Scatter({ rows, selected, onSelect }: Props) {
             : 3.4;
           const isSel = r.line === selected;
           const isHov = r.line === hover;
+          const inA = groupA.includes(r.line);
+          const inB = groupB.includes(r.line);
+          const stroke = inA ? "#8b2e1a" : inB ? "#2c4a6e" : isSel ? "#1c1914" : "#fffdf8";
           return (
             <g key={r.line}>
-              {r.protocol_slot && (
-                <circle cx={cx} cy={cy} r={rad + 4} className="halo" />
+              {(r.protocol_slot || inA || inB) && (
+                <circle cx={cx} cy={cy} r={rad + 4} className="halo" stroke={stroke} />
               )}
               <circle
                 cx={cx}
                 cy={cy}
-                r={isSel || isHov ? rad + 2 : rad}
+                r={isSel || isHov || inA || inB ? rad + 2 : rad}
                 fill={lineageColor(r.lineage)}
                 fillOpacity={r.crispr_available ? 0.88 : 0.4}
-                stroke={isSel ? "#1c1914" : r.mct1_dependent ? "#1c1914" : "#fffdf8"}
-                strokeWidth={isSel ? 2 : 1}
+                stroke={stroke}
+                strokeWidth={inA || inB || isSel ? 2.2 : 1}
                 className="dot"
                 onMouseEnter={() => setHover(r.line)}
                 onMouseLeave={() => setHover(null)}
