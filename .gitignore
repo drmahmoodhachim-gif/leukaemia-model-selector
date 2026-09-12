@@ -1,0 +1,15 @@
+node_modules
+dist
+.DS_Store
+.env
+.env.local
+.env.production
+*.log
+.vite
+supabase/seed_a.sql
+supabase/seed_b.sql
+supabase/seed_chunk_*.sql
+supabase/seed_compact.json
+*.docx
+*.xlsx
+CSRG-25-14_Thesis_Chapter_*.docx
