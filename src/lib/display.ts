@@ -57,6 +57,35 @@ export function matchesQuestion(row: LeukemiaLine, q: Question): boolean {
   return true;
 }
 
+export const LINEAGE_COLOR: Record<string, string> = {
+  AML: "#8b2e1a",
+  "B-ALL": "#2c4a6e",
+  "T-ALL": "#2f5d3a",
+  MPN: "#8a5a12",
+  ALAL: "#5c4a7a",
+};
+
+export const SLOTS: {
+  slot: string;
+  lineId: string;
+  line: string;
+  job: string;
+  avoid: string;
+}[] = [
+  { slot: "A", lineId: "KASUMI1", line: "KASUMI-1", job: "AML axis contrast", avoid: "Calling it MCT1-essential (Chronos −0.24)" },
+  { slot: "B", lineId: "OCIAML3", line: "OCI-AML3", job: "AML axis contrast; MCT4-high", avoid: "The B-ALL uptake claim" },
+  { slot: "C", lineId: "NALM6", line: "NALM-6", job: "B-ALL MCT1-dependent (Chronos −1.07)", avoid: "Oxidation or LPS" },
+  { slot: "D", lineId: "SEM", line: "SEM", job: "B-ALL weak MCT1 dependency", avoid: "Treating it as the strong B-ALL arm" },
+  { slot: "E", lineId: "DND41", line: "DND-41", job: "T-ALL dependent (26Q1; not in 24Q4 Chronos)", avoid: "Assuming 24Q4 coverage" },
+  { slot: "F", lineId: "JURKAT", line: "Jurkat", job: "T-ALL dependency-null contrast", avoid: "Causal MCT1 uptake or LPS" },
+  { slot: "G", lineId: "K562", line: "K-562", job: "Method development: MCT1 151 / MCT4 3.3 / Chronos −0.95", avoid: "Paediatric ALL biology" },
+  { slot: "H", lineId: "RCHACV", line: "RCH-ACV", job: "B-ALL dependent + vorinostat-sensitive (AUC 0.36)", avoid: "Receptor signalling" },
+];
+
+export function lineageColor(lineage: string): string {
+  return LINEAGE_COLOR[lineage] ?? "#6b6256";
+}
+
 export const QUESTIONS: { id: Question; label: string }[] = [
   { id: "all", label: "All lines" },
   { id: "protocol", label: "Protocol v5.0" },

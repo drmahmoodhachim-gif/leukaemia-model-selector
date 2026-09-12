@@ -1,6 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Inspector from "./Inspector";
+import Scatter from "./Scatter";
 import { loadLines } from "./lib/supabase";
-import { QUESTIONS, fmt, matchesQuestion, prettyLine } from "./lib/display";
+import {
+  LINEAGE_COLOR,
+  QUESTIONS,
+  SLOTS,
+  fmt,
+  lineageColor,
+  matchesQuestion,
+  prettyLine,
+} from "./lib/display";
 import type { LeukemiaLine, Question } from "./lib/types";
 
 type SortKey = keyof LeukemiaLine;
@@ -10,27 +20,19 @@ function pct(rows: LeukemiaLine[], pred: (r: LeukemiaLine) => boolean): string {
   return `${((rows.filter(pred).length / rows.length) * 100).toFixed(1)}%`;
 }
 
-const SLOTS: { slot: string; line: string; job: string; avoid: string }[] = [
-  { slot: "A", line: "KASUMI-1", job: "AML axis contrast", avoid: "Calling it MCT1-essential (Chronos −0.24)" },
-  { slot: "B", line: "OCI-AML3", job: "AML axis contrast; MCT4-high", avoid: "The B-ALL uptake claim" },
-  { slot: "C", line: "NALM-6", job: "B-ALL MCT1-dependent (Chronos −1.07)", avoid: "Oxidation or LPS" },
-  { slot: "D", line: "SEM", job: "B-ALL weak MCT1 dependency", avoid: "Treating it as the strong B-ALL arm" },
-  { slot: "E", line: "DND-41", job: "T-ALL dependent (26Q1; not in 24Q4 Chronos)", avoid: "Assuming 24Q4 coverage" },
-  { slot: "F", line: "Jurkat", job: "T-ALL dependency-null contrast", avoid: "Causal MCT1 uptake or LPS" },
-  { slot: "G", line: "K-562", job: "Method development: MCT1 151 / MCT4 3.3 / Chronos −0.95", avoid: "Paediatric ALL biology" },
-  { slot: "H", line: "RCH-ACV", job: "B-ALL dependent + vorinostat-sensitive (AUC 0.36)", avoid: "Receptor signalling" },
-];
-
 export default function App() {
   const [rows, setRows] = useState<LeukemiaLine[]>([]);
   const [source, setSource] = useState<"supabase" | "bundled">("bundled");
   const [q, setQ] = useState<Question>("all");
   const [lineage, setLineage] = useState("all");
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<string | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
     key: "slc16a1_dep",
     dir: "asc",
   });
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
   useEffect(() => {
     loadLines().then(({ rows: data, source: src }) => {
@@ -71,6 +73,18 @@ export default function App() {
       });
   }, [rows, q, lineage, search, sort]);
 
+  const selectedRow = rows.find((r) => r.line === selected) ?? null;
+
+  function selectLine(id: string) {
+    const next = id && id !== selected ? id : null;
+    setSelected(next);
+    if (next) {
+      requestAnimationFrame(() => {
+        rowRefs.current[next]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      });
+    }
+  }
+
   function toggleSort(key: SortKey) {
     setSort((s) =>
       s.key === key ? { key, dir: s.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" },
@@ -83,83 +97,110 @@ export default function App() {
 
   return (
     <div className="app">
-      <div className="kicker">CSRG-25-14 · CCLE 2025 expression · DepMap 24Q4 Chronos · live from Supabase</div>
-      <h1>Leukaemia model selector</h1>
-      <p className="lead">
-        Pick lines for an MCT1-uptake experiment, not for receptor signalling. MCT1 and MCT4
-        in this matrix match DepMap. SMCT1 does not — that column is discarded. The causal arm
-        is CRISPR gene effect, not expression rank.
-      </p>
+      <header className="hero">
+        <div>
+          <div className="kicker">CSRG-25-14 · CCLE 2025 · DepMap 24Q4 Chronos · Supabase</div>
+          <h1>Leukaemia model selector</h1>
+          <p className="lead">
+            Click the plot, a protocol card, or a row. MCT1 and MCT4 match DepMap. SMCT1 is
+            floor. The causal arm is CRISPR gene effect, not expression rank.
+          </p>
+        </div>
+        <div className="stats">
+          <div className="stat danger">
+            <b>{pct(rows, (r) => r.ffar2_detected)}</b>
+            <span>FFAR2 on in lines</span>
+          </div>
+          <div className="stat ok">
+            <b>{pct(rows, (r) => (r.slc16a1 ?? 0) > 1)}</b>
+            <span>MCT1 on</span>
+          </div>
+          <div className="stat warn">
+            <b>{depN}</b>
+            <span>MCT1 Chronos &lt; −0.5</span>
+          </div>
+          <div className="stat">
+            <b>
+              {crisprN}/{rows.length || "—"}
+            </b>
+            <span>with CRISPR</span>
+          </div>
+        </div>
+      </header>
 
-      <div className="stats">
-        <div className="stat danger">
-          <b>{pct(rows, (r) => r.ffar2_detected)}</b>
-          <span>FFAR2 TPM &gt; 1 in lines</span>
-        </div>
-        <div className="stat ok">
-          <b>{pct(rows, (r) => (r.slc16a1 ?? 0) > 1)}</b>
-          <span>SLC16A1 / MCT1 on</span>
-        </div>
-        <div className="stat warn">
-          <b>{depN}</b>
-          <span>MCT1 Chronos &lt; −0.5</span>
-        </div>
-        <div className="stat">
-          <b>
-            {crisprN}/{rows.length || "—"}
-          </b>
-          <span>lines with CRISPR</span>
-        </div>
+      <div className="legend">
+        {Object.entries(LINEAGE_COLOR).map(([name, color]) => (
+          <button
+            key={name}
+            type="button"
+            className={lineage === name ? "swatch active" : "swatch"}
+            onClick={() => setLineage(lineage === name ? "all" : name)}
+          >
+            <i style={{ background: color }} />
+            {name}
+            <em>{rows.filter((r) => r.lineage === name).length}</em>
+          </button>
+        ))}
+        {lineage !== "all" && (
+          <button type="button" className="swatch" onClick={() => setLineage("all")}>
+            Clear lineage
+          </button>
+        )}
       </div>
 
-      <div className="banner">
-        <strong>Butyrate entry is MCT-mediated because SMCT1 is off.</strong>
-        The old SMCT1 column (MUTZ-3 44 TPM, MONO-MAC-1 42, NOMO-1 26, HL-60 14) was the
-        cBioPortal CCLE 2025 assignment. Same extract, same Entrez 160728 — MCT1 and MCT4
-        match DepMap to the decimal; SLC5A8 does not. DepMap 26Q1 max in leukaemia is 0.010
-        TPM. TARGET blasts are floor. Do not qPCR that tail as if it were a CMP conflict.
-      </div>
-      <div className="banner info">
-        <strong>Receptors are off in lines and on in patients.</strong>
-        FFAR2/FFAR3/HCAR2 are floor in this matrix. P31-FUJ is the only usable FFAR2 line
-        (7.65 TPM) — receptor arm only; it is an oxidiser and not MCT1-dependent. In TARGET
-        AML, HCAR2 is above 1 TPM in about 93% of blasts. That is the v5.0 correction, not a
-        reason to treat lines as receptor models.
-      </div>
-      <div className="banner">
-        <strong>Do not pick a panel on expression alone.</strong>
-        HL-60, MUTZ-3 and MONO-MAC-6 have no CRISPR gene effect. THP-1 and Jurkat are
-        dependency-null. LOUCY and SUP-T11 are the only lymphoid oxidisers and have no
-        CRISPR — expression contrast only. A pretty A–F list of those lines cannot show the
-        effect the causal arm tests.
+      <div className="workspace">
+        <Scatter rows={filtered} selected={selected} onSelect={selectLine} />
+        <Inspector row={selectedRow} />
       </div>
 
-      <h2>Protocol v5.0 — eight lines with a dependency score</h2>
-      <table className="slots">
-        <thead>
-          <tr>
-            <th>Slot</th>
-            <th>Line</th>
-            <th>Primary job</th>
-            <th>Do not use it for</th>
-          </tr>
-        </thead>
-        <tbody>
-          {SLOTS.map((s) => (
-            <tr key={s.slot}>
-              <td>{s.slot}</td>
-              <td>{s.line}</td>
-              <td>{s.job}</td>
-              <td>{s.avoid}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <h2>Protocol v5.0</h2>
+      <div className="slot-grid">
+        {SLOTS.map((s) => {
+          const row = rows.find((r) => r.line === s.lineId);
+          const on = selected === s.lineId;
+          return (
+            <button
+              key={s.slot}
+              type="button"
+              className={on ? "slot-card on" : "slot-card"}
+              onClick={() => selectLine(s.lineId)}
+            >
+              <span className="slot-id" style={{ color: lineageColor(row?.lineage ?? "AML") }}>
+                {s.slot}
+              </span>
+              <strong>{s.line}</strong>
+              <span className="slot-meta">
+                {row?.lineage ?? ""} · MCT1 {fmt(row?.slc16a1, 1)} · MCT4 {fmt(row?.slc16a3, 1)} · dep{" "}
+                {fmt(row?.slc16a1_dep)}
+              </span>
+              <span className="slot-job">{s.job}</span>
+            </button>
+          );
+        })}
+      </div>
       <p className="source" style={{ marginTop: 8 }}>
-        Keep the six-line core (KASUMI-1 / OCI-AML3, NALM-6 / SEM, DND-41 / Jurkat). Add K-562
-        for the Belfast histone prep and RCH-ACV to the B-ALL arm. P31-FUJ is extra, receptor
-        only.
+        Six-line core plus K-562 for method development and RCH-ACV on the B-ALL arm. P31-FUJ
+        is extra, receptor only — click <button type="button" className="textlink" onClick={() => selectLine("P31FUJ")}>P31-FUJ</button>.
       </p>
+
+      <details className="notes" open={notesOpen} onToggle={(e) => setNotesOpen(e.currentTarget.open)}>
+        <summary>Why SMCT1 is floor, and why receptors in lines are the wrong story</summary>
+        <div className="banner">
+          <strong>Butyrate entry is MCT-mediated because SMCT1 is off.</strong>
+          The old SMCT1 column (MUTZ-3 44 TPM) was a discarded cBioPortal assignment. DepMap
+          26Q1 max in leukaemia is 0.010 TPM. TARGET blasts are floor.
+        </div>
+        <div className="banner info">
+          <strong>Receptors are off in lines and on in patients.</strong>
+          P31-FUJ is the only usable FFAR2 line. In TARGET AML, HCAR2 is above 1 TPM in about
+          93% of blasts.
+        </div>
+        <div className="banner">
+          <strong>Do not pick a panel on expression alone.</strong>
+          HL-60, MUTZ-3 and MONO-MAC-6 have no CRISPR. THP-1 and Jurkat are dependency-null.
+          LOUCY and SUP-T11 have no CRISPR.
+        </div>
+      </details>
 
       <h2>Ranked matrix</h2>
       <div className="filters">
@@ -187,9 +228,14 @@ export default function App() {
             </option>
           ))}
         </select>
+        {selected && (
+          <button type="button" className="filter" onClick={() => setSelected(null)}>
+            Clear selection
+          </button>
+        )}
       </div>
 
-      <div style={{ overflowX: "auto" }}>
+      <div className="table-wrap">
         <table>
           <thead>
             <tr>
@@ -199,7 +245,7 @@ export default function App() {
               <th className="num" onClick={() => toggleSort("slc16a1")}>MCT1</th>
               <th className="num" onClick={() => toggleSort("slc16a3")}>MCT4</th>
               <th className="num" onClick={() => toggleSort("slc16a1_dep")}>MCT1 dep</th>
-              <th className="num" onClick={() => toggleSort("slc5a8")}>SMCT1</th>
+              <th className="num">SMCT1</th>
               <th className="num" onClick={() => toggleSort("ffar2")}>FFAR2</th>
               <th className="num" onClick={() => toggleSort("auc_vorinostat")}>Vor. AUC</th>
               <th>Flags</th>
@@ -209,16 +255,24 @@ export default function App() {
             {filtered.map((r) => (
               <tr
                 key={r.line}
+                ref={(el) => {
+                  rowRefs.current[r.line] = el;
+                }}
                 className={[
                   r.ebv_caveat ? "ebv" : "",
                   r.protocol_slot ? "protocol" : "",
                   r.crispr_available && !r.mct1_dependent ? "dep-null" : "",
+                  selected === r.line ? "selected" : "",
                 ]
                   .filter(Boolean)
                   .join(" ") || undefined}
+                onClick={() => selectLine(r.line)}
               >
                 <td>{r.protocol_slot ?? "—"}</td>
-                <td>{prettyLine(r.line)}</td>
+                <td>
+                  <i className="dot" style={{ background: lineageColor(r.lineage) }} />
+                  {prettyLine(r.line)}
+                </td>
                 <td>{r.lineage}</td>
                 <td className="num">{fmt(r.slc16a1, 1)}</td>
                 <td className="num">{fmt(r.slc16a3, 1)}</td>
@@ -233,7 +287,6 @@ export default function App() {
                   {r.line === "P31FUJ" && <span className="pill">receptor only</span>}
                   {r.cmp_lps_competent && <span className="pill">LPS</span>}
                   {r.cmp_hdaci_sensitive && <span className="pill">HDACi-sens</span>}
-                  {r.cmp_hdaci_resistant && <span className="pill">HDACi-res</span>}
                   {r.ebv_caveat && <span className="pill">EBV</span>}
                 </td>
               </tr>
@@ -243,13 +296,10 @@ export default function App() {
       </div>
 
       <p className="source">
-        Showing {filtered.length} of {rows.length} lines. Data source:{" "}
+        Showing {filtered.length} of {rows.length} lines.{" "}
         {source === "supabase" ? "Supabase leukemia_model_lines" : "bundled CCLE fallback"}.
-        MCT1 / MCT4 are CCLE 2025 TPM and match DepMap. SMCT1 is shown as floor (DepMap 26Q1
-        + TARGET); the discarded cBioPortal tail is in <code>slc5a8_ccle2025</code>, not used
-        for ranking. MCT1 dep is DepMap 24Q4 Chronos (more negative = more dependent; −0.5
-        threshold). DND-41 is in the protocol panel from 26Q1 and has no 24Q4 Chronos row.
-        Vorinostat AUC is CCLE 2019 (low = sensitive).
+        MCT1 / MCT4 = CCLE 2025 TPM. SMCT1 = floor. Chronos = DepMap 24Q4. DND-41 has no 24Q4
+        row.
       </p>
     </div>
   );
