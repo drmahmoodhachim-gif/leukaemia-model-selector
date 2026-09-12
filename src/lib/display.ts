@@ -58,9 +58,9 @@ export function matchesQuestion(row: LeukemiaLine, q: Question): boolean {
 }
 
 export const QUESTIONS: { id: Question; label: string }[] = [
+  { id: "all", label: "All lines" },
   { id: "protocol", label: "Protocol v5.0" },
   { id: "causal", label: "Has CRISPR" },
-  { id: "all", label: "All lines" },
   { id: "scfa", label: "SCFA transport / ox" },
   { id: "hdaci", label: "HDACi response" },
   { id: "lps", label: "Pathogen products" },

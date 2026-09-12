@@ -24,7 +24,7 @@ const SLOTS: { slot: string; line: string; job: string; avoid: string }[] = [
 export default function App() {
   const [rows, setRows] = useState<LeukemiaLine[]>([]);
   const [source, setSource] = useState<"supabase" | "bundled">("bundled");
-  const [q, setQ] = useState<Question>("protocol");
+  const [q, setQ] = useState<Question>("all");
   const [lineage, setLineage] = useState("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
